@@ -53,8 +53,6 @@ coverage.xml
 
 # VSCode files
 .vscode
-/.vscode
-./.vscode
 
 # Translations
 *.mo
