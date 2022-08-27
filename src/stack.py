@@ -1,7 +1,7 @@
 class Stack(object):
 
   def __init__(self, initial_values=[]):
-    self.__stack = initial_values
+    self.__stack: list = initial_values
 
   def push(self, value=None):
     if value is not None:
@@ -21,7 +21,10 @@ class Stack(object):
     return element
 
   def length(self):
-    return self.__stack.__len__()
+    return len(self.__stack)
 
   def empty(self):
     return (self.__stack.__len__() == 0)
+
+  def __str__(self):
+    return str(self.__stack)
