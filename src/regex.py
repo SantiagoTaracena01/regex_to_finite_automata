@@ -1,5 +1,4 @@
 from finite_automata import NFA
-from stack import Stack
 
 class Regex(object):
   
@@ -9,5 +8,8 @@ class Regex(object):
   def __str__(self):
     return self.__expression
 
-  def thompson_algorithm(self) -> NFA:
-    ...
+  def convert_to_NFA(self) -> NFA:
+    nfa = []
+    for char in self.__expression:
+      if (char == "*"):
+        nfa.append("")
