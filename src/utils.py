@@ -1,7 +1,7 @@
-from ast import operator
-from tabnanny import check
+# Clases y archivos importantes.
 from stack import Stack
 
+# Constantes importantes para el archivo.
 OPERATORS = ("*", ".", "+")
 OPERATORS_AND_PARENTHESIS = ("(", ")", "*", ".", "+")
 OPERATOR_PRECEDENCE = { "*": 3, ".": 2, "+": 1, "(": 0, ")": 0, "": 0 }
@@ -31,38 +31,38 @@ def check_concatenations(regex):
 
 # Función que convierte una expresión regular de infix a postfix.
 def regex_infix_to_postfix(regex):
-  
+
   # Conversión a una expresión con concatenaciones explícitas.
   regex = check_concatenations(regex)
-  
+
   # Expresión postfix y stack de operaciones.
   postfix = ""
   operator_stack = Stack()
-  
+
   # Análisis de cada caracter de la expresión regular.
   for char in regex:
-    
+
     # Si el caracter es un paréntesis izquierdo, se agrega al stack.
     if (char == "("):
       operator_stack.push(char)
-    
+
     # Si el caracter es un paréntesis derecho, se busca su par izquierdo.
     elif (char == ")"):
       while (operator_stack.peek() != "("):
         postfix += operator_stack.pop()
       operator_stack.pop()
-    
+
     # Si el caracter es un operador en el conjunto {*, ., +}.
     elif (char in OPERATORS):
-      
+
       # Si el stack aún está vacío, el operador se guarda en el stack.
       if (operator_stack.is_empty()):
         operator_stack.push(char)
-      
+
       # El caracter se agrega a la expresión si hay un paréntesis izquierdo en el stack.
       elif (operator_stack.peek() == "("):
         operator_stack.push(char)
-      
+
       # Para cualquier otro caso, se verifica la precedencia del operador.      
       else:
 
@@ -82,16 +82,16 @@ def regex_infix_to_postfix(regex):
           last_operator = operator_stack.peek()
           last_precedence = OPERATOR_PRECEDENCE[last_operator]
 
+        # Al finalizar, el operador actual se agrega al stack.
         operator_stack.push(char)
-    
+
     # Si el caracter es un operando, agregar a la expresión postfix.
     else:
       postfix += char
-  
+
   # Si el stack aún no está vacío, todos los demás operadores se agregan a la expresión.
   while (not operator_stack.is_empty()):
     postfix += operator_stack.pop()
 
+  # Retorno de la expresión postfix.
   return postfix
-
-print(regex_infix_to_postfix("abb((a+b)+b)a*b")) # ESPERADO: aab+*.b.
