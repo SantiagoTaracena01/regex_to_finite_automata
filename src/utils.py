@@ -16,17 +16,34 @@ def simplify_regex(regex):
       simplified_regex += regex[i]
   return (regex[0] + simplified_regex[::-1])
 
+# Función que agrega símbolos de concatenación explícitos a la expresión regular.
 def check_concatenations(regex):
+
+  # Expresión regular finalizada.
   output = ""
+
+  # Iteración sobre el índice y caracter de una expresión regular.
   for index, char in enumerate(regex):
+
+    # Cualquier caracter se agrega a la expresión regular convertida.
     output += char
+
+    # Lectura de caracteres y su letra siguiente.
     try:
+
+      # Los caracteres + y ( nunca llevarán una concatenación después de ellos.
       if ((char == "+") or (char == "(")):
         continue
+
+      # Condiciones para llevar una concatenación luego del caracter analizado.
       elif (((char == ")") or (char == "*") or (char not in OPERATORS_AND_PARENTHESIS)) and (regex[index + 1] not in ("*", "+", ")"))):
         output += "."
+
+    # Si ocurre un error buscando el siguiente caracter, el proceso finaliza.
     except:
       pass
+
+  # Retorno de la expresión regular convertida.
   return output
 
 # Función que convierte una expresión regular de infix a postfix.
