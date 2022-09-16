@@ -54,5 +54,8 @@ class PersonalSet(object):
       else:
         return False
 
+  def __len__(self):
+    return len(self.__content)
+
   def __str__(self):
     return str(set(self.__content))
