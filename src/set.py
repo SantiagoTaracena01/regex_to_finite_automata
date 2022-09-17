@@ -5,10 +5,8 @@
 """
 
 class PersonalSet(object):
-  
-  __content = []
-  
-  def __init__(self, initial_content):
+
+  def __init__(self, initial_content=[]):
     self.__content = initial_content
   
   def get_content(self):
@@ -57,5 +55,10 @@ class PersonalSet(object):
   def __len__(self):
     return len(self.__content)
 
-  def __str__(self):
-    return str(set(self.__content))
+  def __repr__(self):
+    sorted_set = sorted(self.__content)
+    string_set = "{"
+    for i in range(len(sorted_set) - 1):
+      string_set += f"{sorted_set[i]}, "
+    string_set += (f"{sorted_set[-1]}" + "}")
+    return string_set

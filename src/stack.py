@@ -21,7 +21,7 @@ class Stack(object):
     return len(self.__stack)
 
   # Representación en string del stack, retorna la propiedad self.__stack.
-  def __str__(self):
+  def __repr__(self):
     return str(self.__stack)
 
   # Función que retorna si el stack está vacío o no.

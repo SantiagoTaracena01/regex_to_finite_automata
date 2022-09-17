@@ -31,8 +31,8 @@ def check_concatenations(regex):
     # Lectura de caracteres y su letra siguiente.
     try:
 
-      # Los caracteres + y ( nunca llevarán una concatenación después de ellos.
-      if ((char == "+") or (char == "(")):
+      # Los caracteres +, ( y . nunca llevarán una concatenación después de ellos.
+      if ((char == "+") or (char == "(") or (char == ".")):
         continue
 
       # Condiciones para llevar una concatenación luego del caracter analizado.
@@ -112,3 +112,21 @@ def regex_infix_to_postfix(regex):
 
   # Retorno de la expresión postfix.
   return postfix
+
+"""
+mapping = {
+  "0": { EPSILON: {"1", "2"} },
+  "1": { a: {"3"} },
+  ...
+}
+"""
+
+def check_epsilon_transitions(mapping):
+  
+  transitions = []
+  
+  for key in mapping:
+    for state in mapping[key]:
+      transitions.append(state)
+  
+  return transitions.count("E")
