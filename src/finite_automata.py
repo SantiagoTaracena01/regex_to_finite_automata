@@ -4,6 +4,24 @@ import utils
 
 EPSILON = "E"
 
+"""
+OR de prueba
+or_nfa = {
+  "states": PersonalSet(["0", "1", "2", "3", "4", "5"]),
+  "alphabet": PersonalSet(["a", "b"]),
+  "mapping": {
+    "0": { EPSILON: PersonalSet(["1", "2"]) },
+    "1": { "a": PersonalSet(["3"]) },
+    "2": { "b": PersonalSet(["4"]) },
+    "3": { EPSILON: PersonalSet(["5"]) },
+    "4": { EPSILON: PersonalSet(["5"]) },
+    "5": {}
+  },
+  "initial_state": "0",
+  "acceptance_states": PersonalSet(["5"]),
+}
+"""
+
 class NFA(object):
 
   __states = PersonalSet([])
@@ -19,21 +37,29 @@ class NFA(object):
     simplified_regex = utils.simplify_regex(regex)
     postfix_regex = utils.regex_infix_to_postfix(simplified_regex)
 
+    print(postfix_regex)
+
     # Stack de autómatas a concatenar.
     nfa_stack = Stack()
 
+    # Iteración sobre cada caracter en la expresión regular en postfix.
     for char in postfix_regex:
-      
-      print("Char", char)
-      
+
+      # Si el caracter no es un operador, se crea un AFN de la transición y se inserta en el stack.
       if (char not in utils.OPERATORS):
         concatenation_nfa = self.__symbol_transition(char)
         nfa_stack.push(concatenation_nfa)
-      
+
+      elif (char == "*"):
+        kleene_char = nfa_stack.pop()
+        kleene_nfa = self.__ship(postfix_regex, kleene_char)
+        nfa_stack.push(kleene_nfa)
+
+      # Si el operador es una concatenación, se concatenan los últimos dos AFNs almacenados en el stack.
       elif (char == "."):
         second_char = nfa_stack.pop()
         first_char = nfa_stack.pop()
-        concatenation_nfa = self.__concatenation(first_char, second_char)
+        concatenation_nfa = self.__concatenation(postfix_regex, first_char, second_char)
         nfa_stack.push(concatenation_nfa)
       
       elif (char == "+"):
@@ -60,18 +86,69 @@ class NFA(object):
       "initial_state": "0",
       "acceptance_states": PersonalSet(["1"]),
     }
-  
-  def __concatenation(self, first, second):
 
-    first_states = first["states"]
-    states = first_states.union(PersonalSet([str((len(first_states) - 1)), str(len(first_states))]))
+  def __ship(self, regex, original_nfa):
+    original_nfa_states = original_nfa["states"]
+    additional_states = PersonalSet([str(len(original_nfa_states)), str((len(original_nfa_states) + 1))])
+    states = original_nfa_states.union(additional_states)
     
-    alphabet = first["alphabet"].union(second["alphabet"])
+    alphabet = original_nfa["alphabet"]
     
     mapping = {}
     
+    chars = utils.get_regex_operands(regex)
+    
+    for index, state in enumerate(states.get_content()):
+      if (index == 0):
+        next_state = str((index + 1))
+        last_state = states.get_content()[-1]
+        mapping[state] = { EPSILON: PersonalSet([next_state, last_state]) }
+      elif (index < (len(states.get_content()) - 2)):
+        next_state = str((index + 1))
+        mapping[state] = { chars[(index - 1)]: PersonalSet([next_state]) }
+      elif (index == (len(states.get_content()) - 2)):
+        last_state = states.get_content()[-1]
+        mapping[state] = { EPSILON: PersonalSet(["1", last_state]) }
+      else:
+        mapping[state] = {}
+    
     last_state = states.get_content()[-1]
     acceptance_states = PersonalSet([last_state])
+
+    return {
+      "states": states,
+      "alphabet": alphabet,
+      "mapping": mapping,
+      "initial_state": "0",
+      "acceptance_states": acceptance_states
+    }
+  
+  def __concatenation(self, regex, first, second):
+    
+    if (utils.check_epsilon_transitions(first["mapping"]) > 0):
+
+      print()
+
+    else:
+      
+      # Estados del primer conjunto.
+      first_states = first["states"]
+      states = first_states.union(PersonalSet([str((len(first_states) - 1)), str(len(first_states))]))
+      
+      alphabet = first["alphabet"].union(second["alphabet"])
+      
+      mapping = {}
+      
+      chars = utils.get_regex_operands(regex)
+      
+      for index, state in enumerate(states.get_content()):
+        if (index < (len(states.get_content()) - 1)):
+          mapping[state] = { chars[index]: PersonalSet([str((int(state) + 1))]) }
+        else:
+          mapping[state] = {}
+      
+      last_state = states.get_content()[-1]
+      acceptance_states = PersonalSet([last_state])
     
     return {
       "states": states,
@@ -80,22 +157,6 @@ class NFA(object):
       "initial_state": "0",
       "acceptance_states": acceptance_states
     }
-    
-    # first_states = first["states"].get_content()
-    # second_states = second["states"].get_content()
-    
-    # if (len(first_states) == len(second_states)):
-    #   first_char = first["alphabet"].get_content()[0]
-    #   second_char = second["alphabet"].get_content()[0]
-    #   mapping["0"] = { first_char: PersonalSet(["1"]) }
-    #   mapping["1"] = { second_char: PersonalSet(["2"]) }
-    #   mapping["2"] = {}
-    
-    # else:
-    #   first_states = first["states"]
-    #   mapping["states"] = first_states.union(PersonalSet([str(0 + len(first_states) - 1), str(1 + len(first_states) - 1)]))
-    
-    return new_automata
 
   def __map_concatenation_automata(self, mapping, automata):
     if (len(automata["mapping"]) == 2):
@@ -154,30 +215,6 @@ class NFA(object):
       "initial_state": "0",
       "acceptance_states": "5"
     }
-
-  def __ship(self, regex, index, state):
-    for i in range(4):
-      self.__states.add(state)
-      if (i == 0):
-        self.__mapping[state] = { EPSILON: [(state + 1), (state + 3)], }
-      elif (i == 1):
-        self.__mapping[state] = { regex[index - 1]: [(state + 1)] }
-      elif (i == 2):
-        self.__mapping[state] = { EPSILON: [(state - 1), (state + 1)] }
-      else:
-        try:
-          next_char = regex[index + 1]
-          try:
-            second_next_char = regex[index + 2]
-            if (second_next_char == "*"):
-              self.__mapping[state] = { EPSILON: [(state + 1)] }
-              break
-          except:
-            self.__mapping[state] = { next_char: [(state + 1)] }
-        except: 
-          self.__mapping[state] = {}
-      state += 1
-    return state
 
   def __str__(self):
     return f"States: {self.__states}\nInitial State: {self.__initial_state}\nAcceptance States: {self.__acceptance_states}\nAlphabet: {self.__alphabet}\nMapping: {self.__mapping}\n"

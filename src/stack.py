@@ -34,10 +34,10 @@ class Stack(object):
 
   # Función que retorna el último elemento agregado al stack.
   def peek(self):
-    return (self.__stack[-1] if (not self.is_empty()) else "")
+    return self.__stack[-1]
 
   # Función que remueve el último elemento agregado al stack y lo retorna.
   def pop(self):
     last_element = self.__stack[-1]
-    self.__stack.remove(last_element)
+    self.__stack.pop(-1)
     return last_element

@@ -7,13 +7,25 @@ OPERATORS_AND_PARENTHESIS = ("(", ")", "*", ".", "+")
 OPERATOR_PRECEDENCE = { "*": 3, ".": 2, "+": 1, "(": 0, ")": 0, "": 0 }
 IMPOSSIBLY_HIGH_PRECEDENCE = 99
 
+# Funciones lambda.
+get_regex_operands = lambda regex: [char for char in regex if (char not in OPERATORS)]
+
+# Función que simplifica una expresión regular a su mínima expresión.
 def simplify_regex(regex):
+  
+  # Expresión regular simplificada inicial.
   simplified_regex = ""
+  
+  # Recorrido de la expresión del final al inicio.
   for i in reversed(range(1, len(regex))):
+    
+    # Si hay dos operadores kleene seguidos, la expresión se simplifica.
     if ((regex[i] == "*") and (regex[i - 1] == "*")):
       pass
     else:
       simplified_regex += regex[i]
+  
+  # Retorno de la expresión regular simplificada.
   return (regex[0] + simplified_regex[::-1])
 
 # Función que agrega símbolos de concatenación explícitos a la expresión regular.
@@ -72,12 +84,8 @@ def regex_infix_to_postfix(regex):
     # Si el caracter es un operador en el conjunto {*, ., +}.
     elif (char in OPERATORS):
 
-      # Si el stack aún está vacío, el operador se guarda en el stack.
-      if (operator_stack.is_empty()):
-        operator_stack.push(char)
-
-      # El caracter se agrega a la expresión si hay un paréntesis izquierdo en el stack.
-      elif (operator_stack.peek() == "("):
+      # Si el stack aún está vacío, o hay un paréntesis izquierdo en el stack, se guarda el operador.
+      if ((operator_stack.is_empty()) or (operator_stack.peek() == "(")):
         operator_stack.push(char)
 
       # Para cualquier otro caso, se verifica la precedencia del operador.      
@@ -100,7 +108,7 @@ def regex_infix_to_postfix(regex):
           last_precedence = OPERATOR_PRECEDENCE[last_operator]
 
         # Al finalizar, el operador actual se agrega al stack.
-        operator_stack.push(char)
+        postfix += char
 
     # Si el caracter es un operando, agregar a la expresión postfix.
     else:
@@ -113,20 +121,16 @@ def regex_infix_to_postfix(regex):
   # Retorno de la expresión postfix.
   return postfix
 
-"""
-mapping = {
-  "0": { EPSILON: {"1", "2"} },
-  "1": { a: {"3"} },
-  ...
-}
-"""
-
+# Función que verifica si un mapeo tiene transiciones con epsilon y retorna su cuenta.
 def check_epsilon_transitions(mapping):
-  
+
+  # Transiciones del mapeo.  
   transitions = []
-  
+
+  # Obtención de todos los símbolos de transición del mapeo.
   for key in mapping:
     for state in mapping[key]:
       transitions.append(state)
-  
+
+  # Retorno de la cuenta de las transiciones con epsilon.
   return transitions.count("E")
