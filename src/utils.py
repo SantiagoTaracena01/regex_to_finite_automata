@@ -108,7 +108,7 @@ def regex_infix_to_postfix(regex):
           last_precedence = OPERATOR_PRECEDENCE[last_operator]
 
         # Al finalizar, el operador actual se agrega al stack.
-        postfix += char
+        operator_stack.push(char)
 
     # Si el caracter es un operando, agregar a la expresión postfix.
     else:

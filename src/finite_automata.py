@@ -4,24 +4,6 @@ import utils
 
 EPSILON = "E"
 
-"""
-OR de prueba
-or_nfa = {
-  "states": PersonalSet(["0", "1", "2", "3", "4", "5"]),
-  "alphabet": PersonalSet(["a", "b"]),
-  "mapping": {
-    "0": { EPSILON: PersonalSet(["1", "2"]) },
-    "1": { "a": PersonalSet(["3"]) },
-    "2": { "b": PersonalSet(["4"]) },
-    "3": { EPSILON: PersonalSet(["5"]) },
-    "4": { EPSILON: PersonalSet(["5"]) },
-    "5": {}
-  },
-  "initial_state": "0",
-  "acceptance_states": PersonalSet(["5"]),
-}
-"""
-
 class NFA(object):
 
   __states = PersonalSet([])
@@ -37,8 +19,6 @@ class NFA(object):
     simplified_regex = utils.simplify_regex(regex)
     postfix_regex = utils.regex_infix_to_postfix(simplified_regex)
 
-    print(postfix_regex)
-
     # Stack de autómatas a concatenar.
     nfa_stack = Stack()
 
@@ -50,6 +30,7 @@ class NFA(object):
         concatenation_nfa = self.__symbol_transition(char)
         nfa_stack.push(concatenation_nfa)
 
+      # Si el operador es un kleene, se hace el kleene del último AFN del stack.
       elif (char == "*"):
         kleene_char = nfa_stack.pop()
         kleene_nfa = self.__ship(postfix_regex, kleene_char)
@@ -65,9 +46,10 @@ class NFA(object):
       elif (char == "+"):
         lower_union_character = nfa_stack.pop()
         upper_union_character = nfa_stack.pop()
-        union_nfa = self.__burger(upper_union_character, lower_union_character)
+        union_nfa = self.__burger(postfix_regex, upper_union_character, lower_union_character)
         nfa_stack.push(union_nfa)
     
+    # Asignación de valores finales luego del proceso de conversión.
     final_nfa = nfa_stack.pop()
     self.__states = final_nfa["states"]
     self.__alphabet = final_nfa["alphabet"]
@@ -80,7 +62,7 @@ class NFA(object):
       "states": PersonalSet(["0", "1"]),
       "alphabet": PersonalSet([char]),
       "mapping": {
-        "0": { char: PersonalSet(["1"]) },
+        "0": { char: ["1"] },
         "1": {},
       },
       "initial_state": "0",
@@ -88,6 +70,7 @@ class NFA(object):
     }
 
   def __ship(self, regex, original_nfa):
+    
     original_nfa_states = original_nfa["states"]
     additional_states = PersonalSet([str(len(original_nfa_states)), str((len(original_nfa_states) + 1))])
     states = original_nfa_states.union(additional_states)
@@ -102,13 +85,13 @@ class NFA(object):
       if (index == 0):
         next_state = str((index + 1))
         last_state = states.get_content()[-1]
-        mapping[state] = { EPSILON: PersonalSet([next_state, last_state]) }
+        mapping[state] = { EPSILON: [next_state, last_state] }
       elif (index < (len(states.get_content()) - 2)):
         next_state = str((index + 1))
-        mapping[state] = { chars[(index - 1)]: PersonalSet([next_state]) }
+        mapping[state] = { chars[(index - 1)]: [next_state] }
       elif (index == (len(states.get_content()) - 2)):
         last_state = states.get_content()[-1]
-        mapping[state] = { EPSILON: PersonalSet(["1", last_state]) }
+        mapping[state] = { EPSILON: ["1", last_state] }
       else:
         mapping[state] = {}
     
@@ -124,10 +107,32 @@ class NFA(object):
     }
   
   def __concatenation(self, regex, first, second):
-    
-    if (utils.check_epsilon_transitions(first["mapping"]) > 0):
 
-      print()
+    if ((utils.check_epsilon_transitions(first["mapping"]) > 0) or (utils.check_epsilon_transitions(second["mapping"]) > 0)):
+      
+      states = []
+      
+      complex_nfa = (first if (utils.check_epsilon_transitions(first["mapping"]) > 0) else second)
+      
+      if (complex_nfa == first):
+        for state in complex_nfa["states"].get_content():
+          states.append(state)
+
+      states.append(str((int(states[-1]) + 1)))
+
+      alphabet = first["alphabet"].union(second["alphabet"])
+
+      mapping = complex_nfa["mapping"]
+      
+      chars = utils.get_regex_operands(regex)
+      
+      mapping[states[-2]] = { chars[-1]: [states[-1]] }
+      mapping[states[-1]] = {}
+      
+      last_state = states[-1]
+      acceptance_states = PersonalSet([last_state])
+      
+      states = PersonalSet([states])
 
     else:
       
@@ -143,7 +148,7 @@ class NFA(object):
       
       for index, state in enumerate(states.get_content()):
         if (index < (len(states.get_content()) - 1)):
-          mapping[state] = { chars[index]: PersonalSet([str((int(state) + 1))]) }
+          mapping[state] = { chars[index]: [str((int(state) + 1))] }
         else:
           mapping[state] = {}
       
@@ -158,62 +163,42 @@ class NFA(object):
       "acceptance_states": acceptance_states
     }
 
-  def __map_concatenation_automata(self, mapping, automata):
-    if (len(automata["mapping"]) == 2):
-      for entry in automata["mapping"]:
-        if (automata["mapping"][entry] == {}):
-          continue
-        print("Entry", entry)
-        numerical_entry = int(entry)
-        entry_mapping = automata["mapping"][entry]
-        print("Entry mapping", entry_mapping)
-        entry_mapping_key = list(entry_mapping.keys())[0]
-        numerical_state = int(entry_mapping[entry_mapping_key].get_content()[0])
-        new_entry = str((numerical_entry + 1))
-        mapping[new_entry] = { entry_mapping_key: PersonalSet([str((numerical_state + 2))]) }
-        print(new_entry, mapping[new_entry])
-    return mapping
+  def __burger(self, regex, upper_nfa, lower_nfa):
 
-  def __burger(self, upper_nfa, lower_nfa):
+    states = ["0"]
+    upper_states = len(upper_nfa["states"])
+    lower_states = len(lower_nfa["states"])
+    united_states = (upper_states + lower_states)
     
-    # Mapeo inicial del autómata.
-    mapping = { "0": { EPSILON: PersonalSet(["1", "2"]) } }
+    for index in range(united_states):
+      states.append(str((index + 1)))
+
+    states.append(str((int(states[-1]) + 1)))
     
-    # Alfabetos de los autómatas en forma de listas.
-    upper_alphabet = upper_nfa["alphabet"].get_content()
-    lower_alphabet = lower_nfa["alphabet"].get_content()
+    mapping = {}
     
-    mapping = self.__map_concatenation_automata(mapping, upper_nfa)
-    mapping = self.__map_concatenation_automata(mapping, lower_nfa)
-    print("Mapping after concatenation", mapping)
+    chars = utils.get_regex_operands(regex)
     
-    # # Si la longitud del alfabeto de arriba es 1, puede ser una concatenación o un kleene.
-    # if (len(upper_nfa["mapping"]) == 2):
-    #   for entry in upper_nfa["mapping"]:
-        
-    #     # entry = 0
-    #     # upper_nfa["mapping"][entry] = { a: {1} }
-        
-    #     # entry_mapping = { a: {1} }
-    #     entry_mapping = upper_nfa["mapping"][entry]
-    #     entry_mapping_key = entry_mapping.keys()[0]
-        
-    #     # numerical_entry = 0 como int
-    #     numerical_entry = int(entry)
-    #     numerical_state = int(entry_mapping[entry_mapping_key].get_content()[0])
-        
-    #     # new_entry = 1
-    #     new_entry = str((numerical_entry + 1))
-    #     mapping[new_entry] = { entry_mapping_key: PersonalSet([str((numerical_state + 2))]) }
-        
-    #     # ACABAR CON: { 1: { a: {3} } } para hacer mapping[1] = { a: {3} }
+    for index, state in enumerate(states):
+      if (state == "0"):
+        mapping[state] = { EPSILON: ["1", str((upper_states + 1))] }
+      elif (1 <= int(state) <= (upper_states - 1)):
+        mapping[state] = { chars[index - 1]: [str((int(state) + 1))] }
+      elif (state == str(upper_states)):
+        mapping[state] = { EPSILON: [states[-1]] }
+      elif ((upper_states + 1) <= int(state) <= int(states[-3])):
+        mapping[state] = { chars[index - 2]: [str((int(state) + 1))] }
+      elif (state == states[-2]):
+        mapping[state] = { EPSILON: [states[-1]] }
+      else:
+        mapping[state] = {}
     
     return {
-      "states": PersonalSet(["0", "1", "2", "3", "4", "5"]),
+      "states": PersonalSet(states),
       "alphabet": upper_nfa["alphabet"].union(lower_nfa["alphabet"]),
       "mapping": mapping,
       "initial_state": "0",
-      "acceptance_states": "5"
+      "acceptance_states": PersonalSet(["5"])
     }
 
   def __str__(self):
@@ -224,17 +209,3 @@ class DFA(object):
   def __init__(self, regex):
     for char in regex:
       print(char)
-
-"""
-nfa = NFA(
-  states=Set(["0", "1", ..., "n"]),
-  alphabet=Set(["a", "b"]),
-  mapping={
-    "0": { "a": "1", "b": "2" },
-    "1": { "a": "2", "b": "3" },
-    ...
-  }
-  initial_state="0",
-  final_states=Set(["n"])
-)
-"""
