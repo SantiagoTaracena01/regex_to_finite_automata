@@ -75,12 +75,15 @@ class NFA(object):
 
     while(len(stacky) != 0):
       t = stacky.pop()
-      reachable_states = self.__mapping.get(t).get("EPSILON")
-
-      for state in reachable_states:
-        if state not in result:
-          result.append(state)
-          stacky.append(state)
+      print(t)
+      try:
+        reachable_states = self.__mapping.get(t).get("EPSILON")
+        for state in reachable_states:
+          if state not in result:
+            result.append(state)
+            stacky.append(state)
+      except:
+        pass
 
     return PersonalSet(result)
   
@@ -92,11 +95,15 @@ class NFA(object):
 
     while(len(stacky) != 0):
       t = stacky.pop()
-      reachable_states = self.__mapping.get(t).get(symbol)
-
-      for state in reachable_states:
-        if state not in result:
-          result.append(state)
+      try:
+        # Un try debido a que peude que no tenga transiciones con ese simbolo
+        reachable_states = self.__mapping.get(t).get(symbol)
+        for state in reachable_states:
+          if state not in result:
+            result.append(state)
+      except:
+        pass
+      
 
     return PersonalSet(result)
   
@@ -104,8 +111,6 @@ class NFA(object):
 
     # Diccionario de estados de este dfa
     dfa_states = {}
-
-  
 
     # Pïla de estados, para compararlos entre ellos
     # elementos que deberia admitir: Personalsets
