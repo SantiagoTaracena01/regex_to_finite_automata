@@ -1,6 +1,8 @@
+from utility_classes import State, SimpleNFA
 from set import PersonalSet
 from stack import Stack
 import utils
+import collections
 
 EPSILON = "E"
 
@@ -11,197 +13,134 @@ class NFA(object):
   __mapping = {}
   __initial_state = None
   __acceptance_states = PersonalSet([])
-
-  # Método constructor del AFN.
+  
   def __init__(self, regex):
     
-    # Simplificación previa de la expresión regular.
-    simplified_regex = utils.simplify_regex(regex)
-    postfix_regex = utils.regex_infix_to_postfix(simplified_regex)
-
-    # Stack de autómatas a concatenar.
+    postfix_regex = utils.regex_infix_to_postfix(regex)
+    
     nfa_stack = Stack()
-
-    # Iteración sobre cada caracter en la expresión regular en postfix.
+    
     for char in postfix_regex:
+      
+      # Creación del alfabeto del AFN.
+      if ((char not in utils.OPERATORS) and (char not in self.__alphabet)):
+        self.__alphabet.add(char)
 
-      # Si el caracter no es un operador, se crea un AFN de la transición y se inserta en el stack.
-      if (char not in utils.OPERATORS):
-        concatenation_nfa = self.__symbol_transition(char)
-        nfa_stack.push(concatenation_nfa)
+      # Si el caracter encontrado es un operador kleene.
+      if (char == "*"):
 
-      # Si el operador es un kleene, se hace el kleene del último AFN del stack.
-      elif (char == "*"):
-        kleene_char = nfa_stack.pop()
-        kleene_nfa = self.__ship(postfix_regex, kleene_char)
-        nfa_stack.push(kleene_nfa)
+        # Contenido actual de los estados del AFN.
+        content_from_states = self.__states.get_content()
+        new_content = list(map(lambda n: n + 1, content_from_states))
+        new_states = [0]
 
-      # Si el operador es una concatenación, se concatenan los últimos dos AFNs almacenados en el stack.
+        # Nuevos estados luego de la creación del kleene.
+        for state in new_content:
+          new_states.append(state)
+
+        # Finalización de la nueva lista de estados.
+        new_acceptance_state = (new_states[-1] + 1)
+        new_states.append(new_acceptance_state)
+
+        # AFN al cual aplicar la operación kleene.
+        first_nfa = nfa_stack.pop()
+
+        # Nuevo estado inicial y de aceptación del AFN.
+        new_initial = State(0)
+        new_acceptance = State(new_acceptance_state)
+
+        # El nuevo estado inicial va al estado inicial del AFN anterior y al estado de aceptación.
+        new_initial.set_first_edge(first_nfa.get_initial_state())
+        new_initial.set_last_edge(new_acceptance)
+
+        # El estado de aceptación del AFN ahora se dirige al estado inicial anterior y al de aceptación.
+        first_nfa_acceptante_states = first_nfa.get_acceptance_states()
+        first_nfa_acceptante_states.set_first_edge(first_nfa.get_initial_state())
+        first_nfa_acceptante_states.set_last_edge(new_acceptance)
+
+        # El nuevo AFN se almacena en el stack.
+        new_nfa = SimpleNFA("*", new_initial, new_acceptance)
+        nfa_stack.push(new_nfa)
+
+        # Nuevo conjunto de estados del AFN.
+        self.__states = PersonalSet(new_states)
+        
+        new_mapping = {}
+
+        # Iteración sobre cada entrada del mapeo para actualizarlo.
+        for entrance in self.__mapping:
+
+          # Diccionario de cada entrada y llave.
+          entrance_content = self.__mapping[entrance] # { a: [3] }, { EPSILON: [2, 4] }
+          
+          try:
+            entrance_key = list(entrance_content.keys())[0] # a, EPSILON
+          except:
+            entrance_key = 0
+
+          if (entrance_content == {}):
+            new_mapping[entrance + 1] = { EPSILON: [new_acceptance_state, 1] }
+          elif (entrance_key == EPSILON):
+            entrance_list = entrance_content[entrance_key]
+            new_mapping[entrance + 1] = { entrance_key: [(entrance_list[0] + 1), (entrance_list[1] + 1)] }
+          else:
+            new_mapping[entrance + 1] = { entrance_key: [(n + 1) for n in entrance_content[entrance_key]] }
+        
+        new_mapping[0] = { EPSILON: [1, new_acceptance_state] }
+        new_mapping[new_acceptance_state] = {}
+        
+        # Organización del mapeo del AFN.
+        new_sorted_mapping = dict(collections.OrderedDict(sorted(new_mapping.items())))
+
+        # Cambio del mapeo del AFN.
+        self.__mapping = new_sorted_mapping
+
       elif (char == "."):
-        second_char = nfa_stack.pop()
-        first_char = nfa_stack.pop()
-        concatenation_nfa = self.__concatenation(postfix_regex, first_char, second_char)
-        nfa_stack.push(concatenation_nfa)
+        
+        # Sacamos los dos primeros AFNs del stack, los necesitamos para concatenar.
+        first_nfa = nfa_stack.pop()
+        second_nfa = nfa_stack.pop()
+        
+        # El estado de aceptación del primer AFN pasa a ser el inicial del segundo AFN.
+        first_nfa_acceptante_states = first_nfa.get_acceptance_states()
+        first_nfa_acceptante_states.set_first_edge(second_nfa.get_initial_state())
+        
+        # El nuevo AFN se almacena en el stack.
+        new_nfa = SimpleNFA(".", first_nfa.get_initial_state(), second_nfa.get_acceptance_states())
+        nfa_stack.push(new_nfa)
       
-      elif (char == "+"):
-        lower_union_character = nfa_stack.pop()
-        upper_union_character = nfa_stack.pop()
-        union_nfa = self.__burger(postfix_regex, upper_union_character, lower_union_character)
-        nfa_stack.push(union_nfa)
-    
-    # Asignación de valores finales luego del proceso de conversión.
-    final_nfa = nfa_stack.pop()
-    self.__states = final_nfa["states"]
-    self.__alphabet = final_nfa["alphabet"]
-    self.__mapping = final_nfa["mapping"]
-    self.__initial_state = final_nfa["initial_state"]
-    self.__acceptance_states = final_nfa["acceptance_states"]
-
-  def __symbol_transition(self, char):
-    return {
-      "states": PersonalSet(["0", "1"]),
-      "alphabet": PersonalSet([char]),
-      "mapping": {
-        "0": { char: ["1"] },
-        "1": {},
-      },
-      "initial_state": "0",
-      "acceptance_states": PersonalSet(["1"]),
-    }
-
-  def __ship(self, regex, original_nfa):
-    
-    original_nfa_states = original_nfa["states"]
-    additional_states = PersonalSet([str(len(original_nfa_states)), str((len(original_nfa_states) + 1))])
-    states = original_nfa_states.union(additional_states)
-    
-    alphabet = original_nfa["alphabet"]
-    
-    mapping = {}
-    
-    chars = utils.get_regex_operands(regex)
-    
-    for index, state in enumerate(states.get_content()):
-      if (index == 0):
-        next_state = str((index + 1))
-        last_state = states.get_content()[-1]
-        mapping[state] = { EPSILON: [next_state, last_state] }
-      elif (index < (len(states.get_content()) - 2)):
-        next_state = str((index + 1))
-        mapping[state] = { chars[(index - 1)]: [next_state] }
-      elif (index == (len(states.get_content()) - 2)):
-        last_state = states.get_content()[-1]
-        mapping[state] = { EPSILON: ["1", last_state] }
+      # Si el caracter es un operando, se crea un AFN de un caracter único.
       else:
-        mapping[state] = {}
+        
+        # Nuevo estado inicial y de aceptación del AFN.
+        content_from_states = self.__states.get_content()
+        last_created_state = content_from_states[-1] if content_from_states else 0
+        
+        # Creación de los nuevos estados inicial y de aceptación del AFN.
+        new_initial = State(last_created_state)
+        new_acceptance = State(last_created_state + 1)
+        
+        # El nuevo estado permite llegar a un estado de aceptación con el caracter hallado.
+        new_initial.set_label(char)
+        new_initial.set_first_edge(new_acceptance)
+
+        # El nuevo AFN creado se agrega al stack de AFNs.
+        new_nfa = SimpleNFA("", new_initial, new_acceptance)
+        nfa_stack.push(new_nfa)
+
+        # Los nuevos estados son agregados al conjunto de estados de AFN.
+        self.__states.add(last_created_state)
+        self.__states.add(last_created_state + 1)
+        
+        # El mapping del AFN es actualizado con la incorporación del nuevo AFN.
+        self.__mapping[new_initial.get_state()] = { char: [new_acceptance.get_state()] }
+        self.__mapping[new_acceptance.get_state()] = {}
     
-    last_state = states.get_content()[-1]
-    acceptance_states = PersonalSet([last_state])
+    listed_states = self.__states.get_content()
+    self.__initial_state = listed_states[0]
+    self.__acceptance_states = PersonalSet([listed_states[-1]])
 
-    return {
-      "states": states,
-      "alphabet": alphabet,
-      "mapping": mapping,
-      "initial_state": "0",
-      "acceptance_states": acceptance_states
-    }
-  
-  def __concatenation(self, regex, first, second):
-
-    if ((utils.check_epsilon_transitions(first["mapping"]) > 0) or (utils.check_epsilon_transitions(second["mapping"]) > 0)):
-      
-      states = []
-      
-      complex_nfa = (first if (utils.check_epsilon_transitions(first["mapping"]) > 0) else second)
-      
-      if (complex_nfa == first):
-        for state in complex_nfa["states"].get_content():
-          states.append(state)
-
-      states.append(str((int(states[-1]) + 1)))
-
-      alphabet = first["alphabet"].union(second["alphabet"])
-
-      mapping = complex_nfa["mapping"]
-      
-      chars = utils.get_regex_operands(regex)
-      
-      mapping[states[-2]] = { chars[-1]: [states[-1]] }
-      mapping[states[-1]] = {}
-      
-      last_state = states[-1]
-      acceptance_states = PersonalSet([last_state])
-      
-      states = PersonalSet([states])
-
-    else:
-      
-      # Estados del primer conjunto.
-      first_states = first["states"]
-      states = first_states.union(PersonalSet([str((len(first_states) - 1)), str(len(first_states))]))
-      
-      alphabet = first["alphabet"].union(second["alphabet"])
-      
-      mapping = {}
-      
-      chars = utils.get_regex_operands(regex)
-      
-      for index, state in enumerate(states.get_content()):
-        if (index < (len(states.get_content()) - 1)):
-          mapping[state] = { chars[index]: [str((int(state) + 1))] }
-        else:
-          mapping[state] = {}
-      
-      last_state = states.get_content()[-1]
-      acceptance_states = PersonalSet([last_state])
-    
-    return {
-      "states": states,
-      "alphabet": alphabet,
-      "mapping": mapping,
-      "initial_state": "0",
-      "acceptance_states": acceptance_states
-    }
-
-  def __burger(self, regex, upper_nfa, lower_nfa):
-
-    states = ["0"]
-    upper_states = len(upper_nfa["states"])
-    lower_states = len(lower_nfa["states"])
-    united_states = (upper_states + lower_states)
-    
-    for index in range(united_states):
-      states.append(str((index + 1)))
-
-    states.append(str((int(states[-1]) + 1)))
-    
-    mapping = {}
-    
-    chars = utils.get_regex_operands(regex)
-    
-    for index, state in enumerate(states):
-      if (state == "0"):
-        mapping[state] = { EPSILON: ["1", str((upper_states + 1))] }
-      elif (1 <= int(state) <= (upper_states - 1)):
-        mapping[state] = { chars[index - 1]: [str((int(state) + 1))] }
-      elif (state == str(upper_states)):
-        mapping[state] = { EPSILON: [states[-1]] }
-      elif ((upper_states + 1) <= int(state) <= int(states[-3])):
-        mapping[state] = { chars[index - 2]: [str((int(state) + 1))] }
-      elif (state == states[-2]):
-        mapping[state] = { EPSILON: [states[-1]] }
-      else:
-        mapping[state] = {}
-    
-    return {
-      "states": PersonalSet(states),
-      "alphabet": upper_nfa["alphabet"].union(lower_nfa["alphabet"]),
-      "mapping": mapping,
-      "initial_state": "0",
-      "acceptance_states": PersonalSet(["5"])
-    }
-
-  def __str__(self):
+  def __repr__(self):
     return f"States: {self.__states}\nInitial State: {self.__initial_state}\nAcceptance States: {self.__acceptance_states}\nAlphabet: {self.__alphabet}\nMapping: {self.__mapping}\n"
 
 class DFA(object):

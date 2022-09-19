@@ -51,14 +51,12 @@ class PersonalSet(object):
         return True
       else:
         return False
+  
+  def __contains__(self, item):
+    return (item in self.__content)
 
   def __len__(self):
     return len(self.__content)
 
   def __repr__(self):
-    sorted_set = sorted(self.__content)
-    string_set = "{"
-    for i in range(len(sorted_set) - 1):
-      string_set += f"{sorted_set[i]}, "
-    string_set += (f"{sorted_set[-1]}" + "}")
-    return string_set
+    return str(self.__content)

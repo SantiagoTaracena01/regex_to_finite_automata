@@ -25,6 +25,8 @@ def simplify_regex(regex):
     else:
       simplified_regex += regex[i]
   
+  simplified_regex = simplified_regex.replace(" ", "")
+  
   # Retorno de la expresión regular simplificada.
   return (regex[0] + simplified_regex[::-1])
 
