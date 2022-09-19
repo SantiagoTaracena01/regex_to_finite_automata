@@ -54,7 +54,7 @@ class Post(object):
         regex = regex + "#)"
 
 
-        print("Expresion regular: ", regex)
+        print("\nExpresion regular (r#): ", regex)
         postfix = ""
         pila = []
 
@@ -111,7 +111,7 @@ class Post(object):
                         # print("postfix: ", postfix,"\n")
 
             
-
+        print("\nPostfix obtenida: ", postfix)
         # print("Pila debe de ser vacia", pila)
 
 

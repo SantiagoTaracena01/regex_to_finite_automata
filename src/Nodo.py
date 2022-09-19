@@ -1,7 +1,6 @@
-from tabulate import tabulate
+
 class Nodo:
     def __init__(self, dato, id):
-        # "dato" puede ser de cualquier tipo, incluso un objeto si se sobrescriben los operadores de comparación
         
         self.id = id
         self.dato = dato

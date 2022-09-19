@@ -1,7 +1,4 @@
 
-from hmac import trans_36
-
-
 class Fila:
     def __init__(self, estados_existentes,followpost, tabla_f, alfabeto):
         # "dato" puede ser de cualquier tipo, incluso un objeto si se sobrescriben los operadores de comparación

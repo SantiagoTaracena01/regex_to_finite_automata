@@ -1,0 +1,21 @@
+digraph AFD_directo {
+	rankdir=LR
+	"{1}" [shape=circle]
+	"{2}" [shape=circle]
+	"{3, 4, 5}" [shape=circle]
+	"{3, 4, 5, 6}" [shape=circle]
+	"{3, 4, 5, 7}" [shape=circle]
+	"{8, 3, 4, 5}" [shape=doublecircle]
+	"{1}" -> "{2}" [label=a arrowhead=vee]
+	"{2}" -> "{3, 4, 5}" [label=b arrowhead=vee]
+	"{3, 4, 5}" -> "{3, 4, 5}" [label=b arrowhead=vee]
+	"{3, 4, 5}" -> "{3, 4, 5, 6}" [label=a arrowhead=vee]
+	"{3, 4, 5, 6}" -> "{3, 4, 5, 7}" [label=b arrowhead=vee]
+	"{3, 4, 5, 6}" -> "{3, 4, 5, 6}" [label=a arrowhead=vee]
+	"{3, 4, 5, 7}" -> "{8, 3, 4, 5}" [label=b arrowhead=vee]
+	"{3, 4, 5, 7}" -> "{3, 4, 5, 6}" [label=a arrowhead=vee]
+	"{8, 3, 4, 5}" -> "{3, 4, 5}" [label=b arrowhead=vee]
+	"{8, 3, 4, 5}" -> "{3, 4, 5, 6}" [label=a arrowhead=vee]
+	"" [height=0 shape=box width=0]
+	"" -> "{1}" [arrowhead=vee]
+}
