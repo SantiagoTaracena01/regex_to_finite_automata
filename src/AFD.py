@@ -1,7 +1,7 @@
 
 from Nodo import Nodo
 from Fila_Transiciones import Fila
-# import graphviz
+import graphviz
 
 class AFD:
     __states = {}
@@ -29,7 +29,7 @@ class AFD:
         self.tabla_transiciones_AFD = []
 
         for x in self.analisis:
-            if x not in self.operadores and x != "##":
+            if x not in self.operadores and x != "#":
                 self.alfabeto.add(x)
 
         ##Construccion del AFD
@@ -84,7 +84,7 @@ class AFD:
         archivo.write("}\n")
 
         ## print(self.mapeo)
-        ## ##Transiciones
+        ## ####Transiciones
         archivo.write("TRANSICIONES = ")
         for estoy in self.mapeo:
             i = 0
@@ -103,6 +103,8 @@ class AFD:
         ## archivo.write("\n")
         archivo.close()
 
+        for x in self.mapeo:
+            print(x," ",self.mapeo[x])
         ## print("\n-------------------Tabla de aarbol--------------------\n")
 
         ## for x in self.arbol:
@@ -113,7 +115,19 @@ class AFD:
         ## for x in self.tabla_followpost:
         ##     impresion = "\tID: "+ str(x.id) + "\tsimbolo: "+x.dato +"\tFollowpost: " +str(x.followpost)
         ##     print(impresion)
+
     
+        
+    def pasar_info(self):
+        self.regreso = []
+        self.regreso.append(self.estados_AFD)
+        self.regreso.append(self.alfabeto)
+        self.regreso.append(self.mapeo)
+        self.regreso.append(self.estado_inicial_AFD)
+        self.regreso.append(self.aceptacion)
+
+        return self.regreso
+
     def simulation_afd(self,oracion):
         print("\nCadena a evaluar (w): ", oracion)
         self.recorrido = []
@@ -191,9 +205,9 @@ class AFD:
                 if self.arbol[x].dato == "*":
                     self.arbol[x].anulable = True
                 elif self.arbol[x].dato == ".":
-                    self.arbol[x].anulable = self.arbol[x-1].anulable and self.arbol[x-2].anulable
+                    self.arbol[x].anulable = self.arbol[self.__encontrarhijos(x, self.arbol)[1]].anulable and self.arbol[self.__encontrarhijos(x, self.arbol)[0]].anulable
                 elif self.arbol[x].dato == "|":
-                    self.arbol[x].anulable = self.arbol[x-1].anulable or self.arbol[x-2].anulable
+                    self.arbol[x].anulable = self.arbol[self.__encontrarhijos(x, self.arbol)[1]].anulable or self.arbol[self.__encontrarhijos(x, self.arbol)[0]].anulable
 
         ##firstpost de operaciones
                 
@@ -216,6 +230,7 @@ class AFD:
                     else:
                         self.arbol[x].firstpost = self.arbol[self.__encontrarhijos(x, self.arbol)[1]].firstpost
                         self.arbol[self.__encontrarhijos(x, self.arbol)[1]].usado = True
+                        self.arbol[self.__encontrarhijos(x, self.arbol)[0]].usado = True
             
                 ##Si es un *
                 elif self.arbol[x].dato == "*":
@@ -248,6 +263,7 @@ class AFD:
                         self.arbol[self.__encontrarhijos(x, self.arbol)[0]].usado = True
                     else:
                         self.arbol[x].lastpost = self.arbol[self.__encontrarhijos(x, self.arbol)[0]].lastpost
+                        self.arbol[self.__encontrarhijos(x, self.arbol)[1]].usado = True
                         self.arbol[self.__encontrarhijos(x, self.arbol)[0]].usado = True
             
                 ##Si es un *
@@ -345,6 +361,6 @@ class AFD:
         # f.edge("",str(self.tabla_transiciones_AFD[0].conjunto), arrowhead='vee', )
         # f.render("AFD_directo", view = "True")
 
-        # return self.tabla_transiciones_AFD
+        return self.tabla_transiciones_AFD
 
                 
