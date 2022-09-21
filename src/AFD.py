@@ -102,9 +102,6 @@ class AFD:
                     archivo.write(") -")
         ## archivo.write("\n")
         archivo.close()
-
-        for x in self.mapeo:
-            print(x," ",self.mapeo[x])
         ## print("\n-------------------Tabla de aarbol--------------------\n")
 
         ## for x in self.arbol:
@@ -361,6 +358,6 @@ class AFD:
         # f.edge("",str(self.tabla_transiciones_AFD[0].conjunto), arrowhead='vee', )
         # f.render("AFD_directo", view = "True")
 
-        return self.tabla_transiciones_AFD
+        # return self.tabla_transiciones_AFD
 
                 
